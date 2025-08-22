@@ -3,19 +3,37 @@
 #include <stdexcept>
 #include "rasterization.h"
 #include "helper_cuda.h"
+#include "point_cloud_2.h"
 
-__global__ void projection(float3* positions, 
+#define BATCH_IDX(point_idx) (point_idx / MAX_BATCH_SIZE)
+#define BATCH_OFFSET(point_idx) (point_idx % MAX_BATCH_SIZE)
+
+__device__ float3 get_position(PointBatch* batches, int point_idx) {
+    int batch_idx = BATCH_IDX(point_idx);
+    int batch_offset = BATCH_OFFSET(point_idx);
+    PointBatch* batch = &batches[batch_idx];
+    return batch->get_positions()[batch_offset];
+}
+
+__device__ uchar3 get_color(PointBatch* batches, int point_idx) {
+    int batch_idx = BATCH_IDX(point_idx);
+    int batch_offset = BATCH_OFFSET(point_idx);
+    PointBatch* batch = &batches[batch_idx];
+    return batch->get_colors()[batch_offset];
+}
+
+__global__ void projection(PointBatch* batches, 
                            size_t npoints, 
                            Eigen::Matrix4f F, 
                            Eigen::Matrix3f K, 
                            int w, 
                            int h, 
                            uint64_t* packed_depth) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= npoints) return;
+    int point_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (point_idx >= npoints) return;
 
     // Transform point using combined matrix F
-    float3 p = positions[idx];
+    float3 p = get_position(batches, point_idx);
     Eigen::Vector4f p_homo(p.x, p.y, p.z, 1.0f);
     Eigen::Vector4f p_transformed = F * p_homo;
     Eigen::Vector3f p_cam = p_transformed.head<3>();
@@ -37,7 +55,7 @@ __global__ void projection(float3* positions,
     // Depth testing with atomic operations
     int pixel_id = v * w + u;
     uint32_t depth_bits = __float_as_uint(p_cam.z());
-    uint64_t new_packed = ((uint64_t)depth_bits << 32) | (uint32_t)idx;
+    uint64_t new_packed = ((uint64_t)depth_bits << 32) | (uint32_t)point_idx;
     uint64_t old_packed = packed_depth[pixel_id];
     
     if (new_packed < old_packed) {
@@ -72,7 +90,7 @@ __device__ __forceinline__ float3 normalize(float3 a) {
     return make_float3(a.x/norm, a.y/norm, a.z/norm);
 }
 
-__global__ void point_rejection(float3* positions,
+__global__ void point_rejection(PointBatch* batches,
                                 float3 camera_pos,
                                 uint64_t* packed_depth,
                                 int w,
@@ -88,7 +106,7 @@ __global__ void point_rejection(float3* positions,
     uint32_t point_index = packed & 0xFFFFFFFF;
     if (point_index == 0xFFFFFFFF) return;
 
-    float3 point = positions[point_index];
+    float3 point = get_position(batches, point_index);
     float3 pc = camera_pos - point;
     float3 pc_norm = normalize(pc);
     float max_cos[8] = {0,0,0,0,0,0,0,0};
@@ -102,7 +120,7 @@ __global__ void point_rejection(float3* positions,
                 uint64_t packed = packed_depth[pix_id];
                 uint32_t pt_id = packed & 0xFFFFFFFF;
                 if (pt_id == 0xFFFFFFFF) continue;
-                float3 other_point = positions[pt_id];
+                float3 other_point = get_position(batches, pt_id);
                 float3 pp = other_point - point;
                 float3 pp_norm = normalize(pp);
                 float cos_cone = dot(pc_norm, pp_norm);
@@ -119,7 +137,7 @@ __global__ void point_rejection(float3* positions,
     }
 }
 
-__global__ void resolve(uchar3* colors, 
+__global__ void resolve(PointBatch* batches, 
                         uint64_t* packed_depth, 
                         int w, 
                         int h, 
@@ -140,15 +158,14 @@ __global__ void resolve(uchar3* colors,
     bool point_visible = !visible_filter || visible_mask[pixel_id];
 
     if (point_visible && point_index != 0xFFFFFFFF) {
-        uchar3 color = colors[point_index];
+        uchar3 color = get_color(batches, point_index);
         frame[pixel_id] = make_uchar4(color.x, color.y, color.z, 255);
     } else {
         frame[pixel_id] = background_color;
     }
 }
 
-void rasterization(float3* positions, 
-                    uchar3* colors, 
+void rasterization(PointBatch* batches, 
                     size_t npoints, 
                     Eigen::Matrix4f F, 
                     Eigen::Matrix3f K, 
@@ -173,7 +190,7 @@ void rasterization(float3* positions,
     
     // Launch projection kernel
     projection<<<projection_blocks, projection_threads>>>(
-        positions, npoints, F, K, w, h, packed_depth
+        batches, npoints, F, K, w, h, packed_depth
     );
     
     getLastCudaError("Projection kernel launch failed");
@@ -185,14 +202,14 @@ void rasterization(float3* positions,
         float3 camera_pos = make_float3(p.x(), p.y(), p.z());
 
         point_rejection<<<resolve_grid, resolve_block>>>(
-            positions, camera_pos, packed_depth, w, h, cone_threshold, visible_mask
+            batches, camera_pos, packed_depth, w, h, cone_threshold, visible_mask
         );
         getLastCudaError("Point rejection kernel launch failed");
     }
     
     // Launch resolve kernel
     resolve<<<resolve_grid, resolve_block>>>(
-        colors, packed_depth, w, h, frame, background_color, visible_filter, visible_mask
+        batches, packed_depth, w, h, frame, background_color, visible_filter, visible_mask
     );
     
     getLastCudaError("Resolve kernel launch failed");

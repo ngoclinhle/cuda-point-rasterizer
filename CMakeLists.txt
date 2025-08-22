@@ -82,7 +82,7 @@ target_link_libraries(imgui PUBLIC glfw OpenGL::GL)
 add_executable( ${PROJECT_NAME} 
     src/main.cpp
     src/main_app.cpp
-    src/point_cloud.cpp
+    src/point_cloud_2.cpp
     src/rasterization.cu
     src/camera.cpp
     src/camera_controller.cpp
@@ -141,7 +141,7 @@ target_compile_options(test_pdal PRIVATE ${PDAL_CFLAGS_OTHER})
 
 # Renderer unit test executable
 add_executable(test_renderer tests/test_renderer.cpp
-    src/point_cloud.cpp
+    src/point_cloud_2.cpp
     src/rasterization.cu
     src/camera.cpp
     src/renderer.cpp
@@ -165,3 +165,24 @@ target_link_libraries(test_renderer
 
 target_compile_definitions(test_renderer PRIVATE ${PDAL_DEFINITIONS})
 target_compile_options(test_renderer PRIVATE ${PDAL_CFLAGS_OTHER}) 
+
+# PointCloud2 test executable
+add_executable(test_point_cloud_2 tests/test_point_cloud_2.cpp
+    src/point_cloud_2.cpp
+)
+
+target_include_directories(test_point_cloud_2 PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${PDAL_INCLUDE_DIRS}
+    ${CUDAToolkit_INCLUDE_DIRS}
+)
+
+target_link_libraries(test_point_cloud_2
+    ${PDAL_LIBRARIES}
+    ${CUDA_LIBRARIES}
+    pthread
+    CUDA::cudart
+)
+
+target_compile_definitions(test_point_cloud_2 PRIVATE ${PDAL_DEFINITIONS})
+target_compile_options(test_point_cloud_2 PRIVATE ${PDAL_CFLAGS_OTHER}) 

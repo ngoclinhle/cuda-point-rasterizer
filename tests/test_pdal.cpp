@@ -30,6 +30,25 @@ struct Point {
     uint8_t r, g, b;
 };
 
+class TestFilter : public Filter, public Streamable
+{
+public:
+    TestFilter()
+    {}
+
+    std::string getName() const { return "filters.test"; }
+
+
+private:
+
+    virtual bool processOne(PointRef&)
+    {
+
+        std::cout << "callbac" << std::endl;
+        return true;
+    }
+};
+
 bool test_pdal_read(const std::string& filename) {
     std::cout << "Testing PDAL read for: " << filename << std::endl;
     
@@ -53,6 +72,7 @@ bool test_pdal_read(const std::string& filename) {
         options.add("filename", filename);
         reader.setOptions(options);
 
+        #if 0
         int point_cnt = 0;
         auto point_read_cb = [&point_cnt](PointView& view, PointId idx) {
             // data.push_back(Point(view, idx));
@@ -73,8 +93,14 @@ bool test_pdal_read(const std::string& filename) {
         pdal::PointTable table;
         reader.prepare(table);
         reader.execute(table);
+#else
+        TestFilter filter;
+        filter.setInput(reader);
+        pdal::FixedPointTable table(100);
+        filter.prepare(table);
+        filter.execute(table);
+#endif
 
-        std::cout << "Point count: " << point_cnt << std::endl;
         
         std::cout << "\n✅ PDAL test PASSED" << std::endl;
         return true;

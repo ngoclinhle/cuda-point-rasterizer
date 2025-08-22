@@ -6,7 +6,7 @@
 #include <memory>
 #include <string>
 #include "camera.h"
-#include "point_cloud.h"
+#include "point_cloud_2.h"
 
 /**
  * @brief Renderer manages point cloud rendering with CUDA and OpenGL integration
@@ -100,10 +100,10 @@ public:
      * 
      * @return Pointer to current point cloud, or nullptr if none loaded
      */
-    PointCloud* getPointCloud() const { return pcd.get(); }
+    PointCloud2* getPointCloud() const { return pcd.get(); }
 
 private:
-    std::unique_ptr<PointCloud> pcd;
+    std::unique_ptr<PointCloud2> pcd;
     Camera* camera;
     
     // Framebuffer dimensions

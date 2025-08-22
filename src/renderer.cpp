@@ -1,6 +1,6 @@
 #include "renderer.h"
 #include "rasterization.h"
-#include "point_cloud.h"
+#include "point_cloud_2.h"
 #include <cuda_runtime.h>
 #include "helper_cuda.h"
 #include <GL/gl.h>
@@ -33,24 +33,9 @@ Renderer::~Renderer() {
 
 
 bool Renderer::set_point_cloud(const std::string& filename) {
-    try {
-        std::cout << "Renderer loading point cloud: " << filename << std::endl;
-        pcd = PointCloud::from_file(filename);
-        
-        if (pcd) {
-            std::cout << "Renderer loaded point cloud with " 
-                      << pcd->get_num_points() << " points" << std::endl;
-            return true;
-        }
-        
-        std::cerr << "Failed to load point cloud in renderer" << std::endl;
-        return false;
-        
-    } catch (const std::exception& e) {
-        std::cerr << "Renderer error loading point cloud: " << e.what() << std::endl;
-        pcd.reset();
-        return false;
-    }
+    pcd.reset(new PointCloud2());
+    pcd->load_from_file_async(filename);
+    return true;
 }
 
 
@@ -73,7 +58,7 @@ void Renderer::get_visible_filter(bool& visible_filter, float& threshold) {
 }
 
 void Renderer::render() {
-    if (!pcd || !camera || !d_frame_buffer || !d_packed_depth) {
+    if (!pcd || !camera || !d_frame_buffer || !d_packed_depth || !pcd->get_num_points()) {
         return;
     }
     
@@ -85,8 +70,7 @@ void Renderer::render() {
     checkCudaErrors(cudaMemset(d_visible_mask, 0, mask_size));
     
     rasterization(
-        pcd->get_positions(),          // Point positions
-        pcd->get_colors(),          // Point colors
+        pcd->get_batches(),          // Point positions
         pcd->get_num_points(),          // Number of points
         F,                           // Extrinsic matrix
         K,                           // Intrinsic matrix

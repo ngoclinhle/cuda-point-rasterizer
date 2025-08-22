@@ -169,6 +169,11 @@ int main(int argc, char* argv[]) {
             std::cerr << "Failed to load point cloud from: " << input_file << std::endl;
             return 1;
         }
+
+        auto pcd = renderer->getPointCloud();
+        while (!pcd->is_loaded()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
         
         // Setup camera with reasonable defaults
         std::cout << "Setting up camera..." << std::endl;
@@ -179,7 +184,7 @@ int main(int argc, char* argv[]) {
         
         // Set camera position and orientation (looking down negative Z axis)
         camera->set_pos(Eigen::Vector3f(0.0f, 0.0f, -0.5f));  // 5 units back from origin
-        camera->set_rot(Eigen::Vector3f(0.0f, 0.0f, 0.0f));  // No rotation (looking forward)
+        camera->set_rot(Eigen::Matrix3f::Identity());  // No rotation (looking forward)
         
         // Set camera for renderer
         renderer->set_camera(camera.get());

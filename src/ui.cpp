@@ -113,10 +113,8 @@ void UI::renderCameraControlsWindow() {
         ImGui::Text("Position: %.2f, %.2f, %.2f", current_pos.x(), current_pos.y(), current_pos.z());
         ImGui::Text("Euler angles: %.2f, %.2f, %.2f", current_euler_angles.x(), current_euler_angles.y(), current_euler_angles.z());
 
-        if (ImGui::Button("Fit AABB")) {
-            auto pcd = renderer->getPointCloud();
-            auto bbox = pcd->get_bounding_box();
-            cameraController->fitBoundingBox(bbox);
+        if (ImGui::Button("Fit Point Cloud")) {
+            reset_camera();
         }
 
         ImGui::Separator();
@@ -126,6 +124,12 @@ void UI::renderCameraControlsWindow() {
         ImGui::Text("World Up: %.2f, %.2f, %.2f", cameraController->world_up.x(), cameraController->world_up.y(), cameraController->world_up.z());
         ImGui::End();
     }
+}
+
+void UI::reset_camera() {
+    auto pcd = renderer->getPointCloud();
+    auto bbox = pcd->get_bounding_box();
+    cameraController->fitBoundingBox(bbox);
 }
 
 void UI::renderPointCloudInfoWindow() {

@@ -370,14 +370,5 @@ void MainApp::dropCallback(GLFWwindow* window, int path_count, const char* paths
         return;
     }
     
-    // Load the point cloud
-    if (app->renderer->set_point_cloud(filename)) {
-        // Get the point cloud from renderer to access bounding box
-        PointCloud* pointCloud = app->renderer->getPointCloud();
-        if (pointCloud && app->cameraController) {
-            BoundingBox bbox = pointCloud->get_bounding_box();
-            app->cameraController->fitBoundingBox(bbox);
-            std::cout << "Camera positioned based on point cloud bounding box" << std::endl;
-        }
-    }
+    app->renderer->set_point_cloud(filename);
 } 

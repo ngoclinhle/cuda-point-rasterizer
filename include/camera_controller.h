@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Eigen/Dense>
-#include <point_cloud.h>
+#include <point_cloud_2.h>
 
 struct Camera;
 struct MainApp;

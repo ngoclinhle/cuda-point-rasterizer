@@ -27,6 +27,7 @@ struct UI {
     
     // Check if viewport window is focused for camera controls
     bool isViewportHovered() const;
+    void reset_camera();
 
 private:
     // Window visibility flags
