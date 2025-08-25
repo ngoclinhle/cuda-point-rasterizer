@@ -58,6 +58,7 @@ PointCloud2::~PointCloud2() {
 }
 
 void PointCloud2::add_points(const std::vector<float3>& positions, const std::vector<uchar3>& colors) {
+    std::lock_guard<std::mutex> lock(load_mutex_);
     size_t new_points = positions.size();
     if (new_points == 0) {
         return;
@@ -104,6 +105,7 @@ int get_color_shift(const std::vector<pdal::PointRef>& points) {
 }
 
 void PointCloud2::add_points(const std::vector<pdal::PointRef>& points) {
+    std::lock_guard<std::mutex> lock(load_mutex_);
     size_t batch_index, batch_offset;
     if (color_shift < 0) color_shift = get_color_shift(points);
     

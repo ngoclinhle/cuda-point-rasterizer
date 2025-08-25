@@ -47,6 +47,7 @@ public:
     BoundingBox get_bounding_box() const { return bounding_box_; }
     PointBatch* get_batches() const { return batches_.data(); }
     bool is_loaded() const;
+    std::mutex load_mutex_;
 
 private:
     void add_points(const std::vector<pdal::PointRef>& points);

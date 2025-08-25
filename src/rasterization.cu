@@ -109,7 +109,7 @@ __global__ void point_rejection(PointBatch* batches,
     float3 point = get_position(batches, point_index);
     float3 pc = camera_pos - point;
     float3 pc_norm = normalize(pc);
-    float max_cos[8] = {0,0,0,0,0,0,0,0};
+    float max_cos[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
     for (int j=-3; j<=3; j++) {
         for (int i=-3; i<=3; i++) {
             if (x+i < 0 || x+i >= w || y+j < 0 || y+j >= h) continue;

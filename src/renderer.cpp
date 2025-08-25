@@ -69,6 +69,7 @@ void Renderer::render() {
     checkCudaErrors(cudaMemset(d_frame_buffer, 0, buffer_size));
     checkCudaErrors(cudaMemset(d_visible_mask, 0, mask_size));
     
+    std::lock_guard<std::mutex> lock(pcd->load_mutex_);
     rasterization(
         pcd->get_batches(),          // Point positions
         pcd->get_num_points(),          // Number of points

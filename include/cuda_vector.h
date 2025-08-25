@@ -50,7 +50,6 @@ private:
         if (new_cap <= capacity_) return;
         T* new_data = nullptr;
         checkCudaErrors(cudaMallocManaged(&new_data, new_cap * sizeof(T)));
-        // make sure GPU isn’t using data_ here if applicable
         for (size_t i = 0; i < size_; ++i) {
             new (&new_data[i]) T(std::move_if_noexcept(data_[i])); // moves
             data_[i].~T();                                         // destroy old

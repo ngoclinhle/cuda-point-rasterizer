@@ -21,6 +21,9 @@ node_modules/
 *.sln
 *.sw?
 
+build
+imgui.ini
+
 # OS specific
 .DS_Store
 
